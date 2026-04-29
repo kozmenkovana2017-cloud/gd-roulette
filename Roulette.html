@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>GD Ultimate Roulette</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0074d9; font-family: 'Arial Black', sans-serif; user-select: none; }
+        
+        /* ФОН */
+        #bg { position: absolute; width: 100%; height: 100%; z-index: -1; background: linear-gradient(#005da3, #0074d9); }
+        .ground { position: absolute; bottom: 0; width: 200%; height: 100px; background: #1a1a1a; border-top: 5px solid #4cd137; animation: move-g 2s linear infinite; }
+        
+        /* КУБИК */
+        #cube { position: absolute; bottom: 105px; left: 80px; width: 60px; height: 60px; border: 4px solid #000; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #0f0; z-index: 5; }
+        .eye-row { display: flex; gap: 10px; }
+        .eye { width: 12px; height: 12px; background: #000; border-radius: 50%; }
+
+        /* ИНТЕРФЕЙС */
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 100vh; padding-top: 20px; }
+        
+        /* ТЕКСТ ВЫШЕ */
+        #res { font-size: 60px; color: #00ffcc; font-weight: 900; text-shadow: 4px 4px 0 #000, 0 0 20px rgba(0, 255, 204, 0.6); height: 80px; margin-bottom: 20px; text-transform: uppercase; }
+        
+        /* РЕАЛИСТИЧНАЯ РУЛЕТКА */
+        .wheel-wrap { 
+            position: relative; 
+            width: 380px; 
+            height: 380px; 
+            border: 15px solid #333; 
+            border-radius: 50%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 20px #000;
+            background: #222;
+        }
+        
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 50%; 
+            transition: transform 5s cubic-bezier(0.1, 0, 0.05, 1);
+        }
+
+        /* Центр рулетки (болт) */
+        .wheel-wrap::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px; height: 40px;
+            background: radial-gradient(circle, #ccc, #333);
+            border-radius: 50%;
+            z-index: 11;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        }
+
+        .pointer { 
+            position: absolute; 
+            top: -25px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 0; height: 0; 
+            border-left: 25px solid transparent; 
+            border-right: 25px solid transparent; 
+            border-top: 50px solid #ff3e3e; 
+            z-index: 20; 
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); 
+        }
+
+        button { 
+            margin-top: 30px; padding: 15px 60px; font-size: 26px; 
+            cursor: pointer; background: linear-gradient(#00a8ff, #0077b6); 
+            color: white; border: none; border-radius: 50px; 
+            font-weight: bold; box-shadow: 0 8px 0 #005f91; 
+            transition: 0.1s; text-transform: uppercase;
+        }
+        button:active { transform: translateY(4px); box-shadow: 0 2px 0 #005f91; }
+
+        @keyframes move-g { from { transform: translateX(0); } to { transform: translateX(-100px); } }
+    </style>
+</head>
+<body>
+    <div id="bg">
+        <div class="ground"></div>
+        <div id="cube"><div class="eye-row"><div class="eye"></div><div class="eye"></div></div></div>
+    </div>
+
+    <div class="container">
+        <div id="res">ГОТОВ?</div>
+        <div class="wheel-wrap">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="800" height="800"></canvas>
+        </div>
+        <button onclick="spin()">КРУТИТЬ!</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const modes = ["КУБ", "КОРАБЛИК", "ШАР", "НЛО", "ВОЛНА", "РОБОТ", "ПАУК", "КАЧЕЛИ"];
+        const colors = ["#2ecc71", "#3498db", "#e67e22", "#9b59b6", "#f1c40f", "#e74c3c", "#95a5a6", "#1abc9c"];
+        let currentRotation = 0;
+
+        function draw() {
+            const arc = (Math.PI * 2) / modes.length;
+            ctx.clearRect(0,0,800,800);
+            
+            for (let i = 0; i < modes.length; i++) {
+                const angle = i * arc;
+                // Сектор
+                ctx.save();
+                ctx.beginPath();
+                ctx.fillStyle = colors[i];
+                ctx.moveTo(400, 400);
+                ctx.arc(400, 400, 400, angle, angle + arc);
+                ctx.fill();
+                
+                // Металлический разделитель (линия)
+                ctx.strokeStyle = "rgba(0,0,0,0.3)";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Текст
+                ctx.translate(400, 400);
+                ctx.rotate(angle + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 50px Arial";
+                ctx.textAlign = "right";
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 10;
+                ctx.fillText(modes[i], 360, 20);
+                ctx.restore();
+            }
+            
+            // Блик сверху для реалистичности
+            const grad = ctx.createLinearGradient(0, 0, 800, 800);
+            grad.addColorStop(0, 'rgba(255,255,255,0.15)');
+            grad.addColorStop(0.5, 'transparent');
+            grad.addColorStop(1, 'rgba(0,0,0,0.2)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(400,400,400,0,Math.PI*2);
+            ctx.fill();
+        }
+
+        function spin() {
+            const extra = Math.floor(Math.random() * 360) + 2520; // 7 полных кругов
+            currentRotation += extra;
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                const actualAngle = currentRotation % 360;
+                const sectorSize = 360 / modes.length;
+                // Математически точный расчет под стрелку
+                const winningIndex = Math.floor(((360 - (actualAngle % 360)) + 270) % 360 / sectorSize);
+                document.getElementById('res').innerText = modes[winningIndex];
+            }, 5000);
+        }
+
+        // Анимация кубика (сальто и прыжки)
+        const cube = document.getElementById('cube');
+        let jump = false;
+        function animateCube() {
+            jump = !jump;
+            cube.style.transition = "bottom 0.4s ease-out, transform 0.4s ease-out";
+            cube.style.bottom = jump ? "180px" : "105px";
+            cube.style.transform = jump ? "rotate(180deg)" : "rotate(0deg)";
+            if(!jump) cube.style.backgroundColor = `hsl(${Math.random()*360}, 90%, 60%)`;
+            setTimeout(animateCube, 600);
+        }
+        animateCube();
+
+        draw();
+    </script>
+</body>
+</html>
